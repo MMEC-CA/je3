@@ -54,19 +54,6 @@
             justify-content: center;
         }
 
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-        }
-
-        input[type="checkbox"] {
-            cursor: pointer;
-            width: 18px;
-            height: 18px;
-        }
-
         button {
             background-color: var(--player-color);
             color: #000;
@@ -92,6 +79,12 @@
             height: 24px;
         }
 
+        #level-display {
+            font-weight: bold;
+            font-size: 18px;
+            color: var(--player-color);
+        }
+
         .controls-hint {
             margin-top: 15px;
             font-size: 0.9em;
@@ -107,11 +100,8 @@
     </div>
 
     <div id="ui">
-        <button id="newGameBtn">New Game</button>
-        <div class="toggle-container">
-            <input type="checkbox" id="fogToggle" checked>
-            <label for="fogToggle">Fog of War</label>
-        </div>
+        <div id="level-display">Level: <span id="currentLevel">1</span></div>
+        <button id="newGameBtn">Reset Game</button>
         <div id="message"></div>
     </div>
 
@@ -125,11 +115,13 @@
         const newGameBtn = document.getElementById('newGameBtn');
         const messageEl = document.getElementById('message');
         const fogToggle = document.getElementById('fogToggle');
+        const levelEl = document.getElementById('currentLevel');
 
-        const CELL_SIZE = 25;
-        const GRID_WIDTH = 21; // Must be odd for better maze generation
-        const GRID_HEIGHT = 21;
-        const VISION_RADIUS = CELL_SIZE * 3.5;
+        let CELL_SIZE = 25;
+        let GRID_WIDTH = 15; 
+        let GRID_HEIGHT = 15;
+        let VISION_RADIUS = CELL_SIZE * 3.5;
+        let currentLevel = 1;
 
         canvas.width = GRID_WIDTH * CELL_SIZE;
         canvas.height = GRID_HEIGHT * CELL_SIZE;
@@ -178,20 +170,29 @@
             }
         }
 
+        function braidMaze(chance = 0.05) {
+            for (let y = 1; y < GRID_HEIGHT - 1; y++) {
+                for (let x = 1; x < GRID_WIDTH - 1; x++) {
+                    if (grid[y][x].isWall) {
+                        const horizontal = !grid[y][x-1].isWall && !grid[y][x+1].isWall;
+                        const vertical = !grid[y-1][x].isWall && !grid[y+1][x].isWall;
+                        if ((horizontal || vertical) && Math.random() < chance) {
+                            grid[y][x].isWall = false;
+                        }
+                    }
+                }
+            }
+        }
+
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw maze content (Walls, Goal, Player)
             drawMazeContent();
-
-            // Apply Fog of War
             if (fogToggle.checked && !isGameWon) {
                 applyFogOfWar();
             }
         }
 
         function drawMazeContent() {
-            // Draw Walls
             for (let y = 0; y < GRID_HEIGHT; y++) {
                 for (let x = 0; x < GRID_WIDTH; x++) {
                     if (grid[y][x].isWall) {
@@ -201,7 +202,6 @@
                 }
             }
 
-            // Draw Goal
             ctx.fillStyle = 'var(--goal-color)';
             ctx.beginPath();
             ctx.arc(
@@ -211,7 +211,6 @@
             );
             ctx.fill();
 
-            // Draw Player
             ctx.fillStyle = 'var(--player-color)';
             ctx.shadowBlur = 10;
             ctx.shadowColor = 'var(--player-color)';
@@ -227,15 +226,12 @@
         function applyFogOfWar() {
             const px = player.x * CELL_SIZE + CELL_SIZE / 2;
             const py = player.y * CELL_SIZE + CELL_SIZE / 2;
-
             ctx.save();
             ctx.globalCompositeOperation = 'destination-in';
-            
             const gradient = ctx.createRadialGradient(px, py, 0, px, py, VISION_RADIUS);
             gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
             gradient.addColorStop(0.7, 'rgba(0, 0, 0, 1)');
             gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.restore();
@@ -243,29 +239,56 @@
 
         function movePlayer(dx, dy) {
             if (isGameWon) return;
-
             const nx = player.x + dx;
             const ny = player.y + dy;
-
             if (nx >= 0 && nx < GRID_WIDTH && ny >= 0 && ny < GRID_HEIGHT && !grid[ny][nx].isWall) {
                 player.x = nx;
                 player.y = ny;
                 draw();
-
                 if (player.x === goal.x && player.y === goal.y) {
-                    isGameWon = true;
-                    messageEl.textContent = 'YOU WIN!';
-                    messageEl.style.color = 'var(--player-color)';
+                    winLevel();
                 }
             }
         }
 
-        function startNewGame() {
+        function winLevel() {
+            isGameWon = true;
+            messageEl.textContent = 'LEVEL CLEAR!';
+            messageEl.style.color = 'var(--player-color)';
+            draw();
+            setTimeout(() => {
+                currentLevel++;
+                startNewGame();
+            }, 1500);
+        }
+
+        function startNewGame(reset = false) {
+            if (reset) currentLevel = 1;
+            
+            levelEl.textContent = currentLevel;
+            
+            // Adjust difficulty based on level
+            GRID_WIDTH = 15 + (currentLevel - 1) * 4;
+            GRID_HEIGHT = 15 + (currentLevel - 1) * 4;
+            // Cap size at 55 for performance
+            if (GRID_WIDTH > 55) GRID_WIDTH = 55;
+            if (GRID_HEIGHT > 55) GRID_HEIGHT = 55;
+            
+            CELL_SIZE = Math.max(10, 25 - Math.floor(currentLevel / 2));
+            VISION_RADIUS = CELL_SIZE * (3.5 + Math.min(2, currentLevel * 0.2));
+
+            canvas.width = GRID_WIDTH * CELL_SIZE;
+            canvas.height = GRID_HEIGHT * CELL_SIZE;
+
             initGrid();
             generateMaze(1, 1);
+            braidMaze(0.05 + Math.min(0.1, currentLevel * 0.01));
+            
             player = { x: 1, y: 1 };
+            goal = { x: GRID_WIDTH - 2, y: GRID_HEIGHT - 2 };
             isGameWon = false;
             messageEl.textContent = '';
+            
             draw();
         }
 
@@ -278,7 +301,7 @@
             }
         });
 
-        newGameBtn.addEventListener('click', startNewGame);
+        newGameBtn.addEventListener('click', () => startNewGame(true));
         fogToggle.addEventListener('change', draw);
 
         startNewGame();
