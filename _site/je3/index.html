@@ -1,11 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IJNFDJN</title>
-  </head>
-  <body>
-    <p>je3</p>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Game</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --wall-color: #4a4a4a;
+            --player-color: #f7faf9;
+            --goal-color: #ebdb64;
+            --path-color: #5e5757;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            border: 4px solid var(--wall-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background-color: var(--path-color);
+        }
+
+        #ui {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        button {
+            background-color: var(--player-color);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #00cc6d;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        #message {
+            font-weight: bold;
+            height: 24px;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <h1>MAZE</h1>
+    
+    <div id="game-container">
+        <canvas id="mazeCanvas"></canvas>
+    </div>
+
+    <div id="ui">
+        <button id="newGameBtn">New Game</button>
+        <div id="message"></div>
+    </div>
+
+    <div class="controls-hint">
+        Use Arrows or WASD to move
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const messageEl = document.getElementById('message');
+
+        const CELL_SIZE = 25;
+        const GRID_WIDTH = 21; // Must be odd for better maze generation
+        const GRID_HEIGHT = 21;
+
+        canvas.width = GRID_WIDTH * CELL_SIZE;
+        canvas.height = GRID_HEIGHT * CELL_SIZE;
+
+        let grid = [];
+        let player = { x: 1, y: 1 };
+        let goal = { x: GRID_WIDTH - 2, y: GRID_HEIGHT - 2 };
+        let isGameWon = false;
+
+        class Cell {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.isWall = true;
+                this.visited = false;
+            }
+        }
+
+        function initGrid() {
+            grid = [];
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                grid[y] = [];
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    grid[y][x] = new Cell(x, y);
+                }
+            }
+        }
+
+        function generateMaze(x, y) {
+            const cell = grid[y][x];
+            cell.visited = true;
+            cell.isWall = false;
+
+            const directions = [
+                [0, -2], [2, 0], [0, 2], [-2, 0]
+            ].sort(() => Math.random() - 0.5);
+
+            for (const [dx, dy] of directions) {
+                const nx = x + dx;
+                const ny = y + dy;
+
+                if (nx > 0 && nx < GRID_WIDTH - 1 && ny > 0 && ny < GRID_HEIGHT - 1 && !grid[ny][nx].visited) {
+                    grid[y + dy / 2][x + dx / 2].isWall = false;
+                    generateMaze(nx, ny);
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Walls
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    if (grid[y][x].isWall) {
+                        ctx.fillStyle = 'var(--wall-color)';
+                        ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+
+            // Draw Goal
+            ctx.fillStyle = 'var(--goal-color)';
+            ctx.beginPath();
+            ctx.arc(
+                goal.x * CELL_SIZE + CELL_SIZE / 2,
+                goal.y * CELL_SIZE + CELL_SIZE / 2,
+                CELL_SIZE / 3, 0, Math.PI * 2
+            );
+            ctx.fill();
+
+            // Draw Player
+            ctx.fillStyle = 'var(--player-color)';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'var(--player-color)';
+            ctx.fillRect(
+                player.x * CELL_SIZE + 4,
+                player.y * CELL_SIZE + 4,
+                CELL_SIZE - 8,
+                CELL_SIZE - 8
+            );
+            ctx.shadowBlur = 0;
+        }
+
+        function movePlayer(dx, dy) {
+            if (isGameWon) return;
+
+            const nx = player.x + dx;
+            const ny = player.y + dy;
+
+            if (nx >= 0 && nx < GRID_WIDTH && ny >= 0 && ny < GRID_HEIGHT && !grid[ny][nx].isWall) {
+                player.x = nx;
+                player.y = ny;
+                draw();
+
+                if (player.x === goal.x && player.y === goal.y) {
+                    isGameWon = true;
+                    messageEl.textContent = 'YOU WIN!';
+                    messageEl.style.color = 'var(--player-color)';
+                }
+            }
+        }
+
+        function startNewGame() {
+            initGrid();
+            generateMaze(1, 1);
+            player = { x: 1, y: 1 };
+            isGameWon = false;
+            messageEl.textContent = '';
+            draw();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowUp': case 'w': case 'W': movePlayer(0, -1); break;
+                case 'ArrowDown': case 's': case 'S': movePlayer(0, 1); break;
+                case 'ArrowLeft': case 'a': case 'A': movePlayer(-1, 0); break;
+                case 'ArrowRight': case 'd': case 'D': movePlayer(1, 0); break;
+            }
+        });
+
+        newGameBtn.addEventListener('click', startNewGame);
+
+        startNewGame();
+    </script>
+</body>
 </html>
