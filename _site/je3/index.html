@@ -114,7 +114,6 @@
         const ctx = canvas.getContext('2d');
         const newGameBtn = document.getElementById('newGameBtn');
         const messageEl = document.getElementById('message');
-        const fogToggle = document.getElementById('fogToggle');
         const levelEl = document.getElementById('currentLevel');
 
         let CELL_SIZE = 25;
@@ -187,7 +186,8 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawMazeContent();
-            if (fogToggle.checked && !isGameWon) {
+            // Fog of War is now permanent until the game is won
+            if (!isGameWon) {
                 applyFogOfWar();
             }
         }
@@ -302,7 +302,6 @@
         });
 
         newGameBtn.addEventListener('click', () => startNewGame(true));
-        fogToggle.addEventListener('change', draw);
 
         startNewGame();
     </script>
