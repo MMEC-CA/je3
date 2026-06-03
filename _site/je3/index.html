@@ -275,7 +275,7 @@
             if (GRID_HEIGHT > 55) GRID_HEIGHT = 55;
             
             CELL_SIZE = Math.max(10, 25 - Math.floor(currentLevel / 2));
-            VISION_RADIUS = CELL_SIZE * (3.5 + Math.min(2, currentLevel * 0.2));
+            VISION_RADIUS = CELL_SIZE * (2.2 + Math.min(1.5, currentLevel * 0.15));
 
             canvas.width = GRID_WIDTH * CELL_SIZE;
             canvas.height = GRID_HEIGHT * CELL_SIZE;
