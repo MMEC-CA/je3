@@ -6,12 +6,13 @@
     <title>Maze Game</title>
     <style>
         :root {
-            --bg-color: #1a1a1a;
-            --text-color: #e0e0e0;
-            --wall-color: #4a4a4a;
-            --player-color: #f7faf9;
-            --goal-color: #ebdb64;
-            --path-color: #5e5757;
+            --bg-color: #050505;
+            --text-color: #9b1111;
+            --wall-color: #1a1a1a;
+            --player-color: #ff0000;
+            --goal-color: #7a0000;
+            --path-color: #0d0d0d;
+            --font-creepy: 'Courier New', Courier, monospace;
         }
 
         body {
@@ -24,19 +25,28 @@
             min-height: 100vh;
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--font-creepy);
+            text-shadow: 0 0 5px #ff000044;
         }
 
         h1 {
             margin-bottom: 10px;
-            letter-spacing: 2px;
+            letter-spacing: 5px;
+            font-size: 3em;
+            color: #ff0000;
+            animation: flicker-text 3s infinite;
+        }
+
+        @keyframes flicker-text {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+            20%, 22%, 24%, 55% { opacity: 0.4; }
         }
 
         #game-container {
             position: relative;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            border: 4px solid var(--wall-color);
-            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(255,0,0,0.1);
+            border: 2px solid #330000;
+            border-radius: 2px;
             overflow: hidden;
         }
 
@@ -55,19 +65,23 @@
         }
 
         button {
-            background-color: var(--player-color);
-            color: #000;
-            border: none;
+            background-color: #300;
+            color: #ff0000;
+            border: 1px solid #600;
             padding: 10px 20px;
             font-size: 16px;
             font-weight: bold;
-            border-radius: 4px;
+            font-family: var(--font-creepy);
+            border-radius: 0;
             cursor: pointer;
-            transition: transform 0.1s, background-color 0.2s;
+            transition: all 0.2s;
+            text-transform: uppercase;
         }
 
         button:hover {
-            background-color: #00cc6d;
+            background-color: #600;
+            color: #fff;
+            box-shadow: 0 0 15px #ff0000;
         }
 
         button:active {
@@ -77,18 +91,20 @@
         #message {
             font-weight: bold;
             height: 24px;
+            text-shadow: 0 0 10px #ff0000;
         }
 
         #level-display {
             font-weight: bold;
             font-size: 18px;
-            color: var(--player-color);
+            color: var(--text-color);
         }
 
         .controls-hint {
             margin-top: 15px;
-            font-size: 0.9em;
-            color: #888;
+            font-size: 0.8em;
+            color: #400;
+            letter-spacing: 1px;
         }
     </style>
 </head>
@@ -183,10 +199,28 @@
             }
         }
 
+        let flicker = 0;
+        let pulse = 0;
+        let breathe = 0;
+
+        function animate() {
+            flicker = Math.random() * 15 * (Math.random() > 0.95 ? 2 : 0.2);
+            pulse = (Math.sin(Date.now() / 300) + 1) / 2;
+            breathe = Math.sin(Date.now() / 2000) * 5;
+            draw();
+            requestAnimationFrame(animate);
+        }
+
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Random static glitch
+            if (Math.random() > 0.98) {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.05)';
+                ctx.fillRect(Math.random() * canvas.width, 0, 2, canvas.height);
+            }
+
             drawMazeContent();
-            // Fog of War is now permanent until the game is won
             if (!isGameWon) {
                 applyFogOfWar();
             }
@@ -202,18 +236,24 @@
                 }
             }
 
-            ctx.fillStyle = 'var(--goal-color)';
+            // Pulsing goal
+            const goalColor = `rgba(122, 0, 0, ${0.5 + pulse * 0.5})`;
+            ctx.fillStyle = goalColor;
+            ctx.shadowBlur = 10 + pulse * 10;
+            ctx.shadowColor = '#ff0000';
             ctx.beginPath();
             ctx.arc(
                 goal.x * CELL_SIZE + CELL_SIZE / 2,
                 goal.y * CELL_SIZE + CELL_SIZE / 2,
-                CELL_SIZE / 3, 0, Math.PI * 2
+                (CELL_SIZE / 3) * (0.8 + pulse * 0.4), 0, Math.PI * 2
             );
             ctx.fill();
+            ctx.shadowBlur = 0;
 
+            // Player with blood-like trail/glow
             ctx.fillStyle = 'var(--player-color)';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = 'var(--player-color)';
+            ctx.shadowBlur = 15 + flicker;
+            ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
             ctx.fillRect(
                 player.x * CELL_SIZE + 4,
                 player.y * CELL_SIZE + 4,
@@ -226,16 +266,50 @@
         function applyFogOfWar() {
             const px = player.x * CELL_SIZE + CELL_SIZE / 2;
             const py = player.y * CELL_SIZE + CELL_SIZE / 2;
+            
+            const currentVision = VISION_RADIUS - flicker + breathe;
+            
             ctx.save();
             ctx.globalCompositeOperation = 'destination-in';
-            const gradient = ctx.createRadialGradient(px, py, 0, px, py, VISION_RADIUS);
+            const gradient = ctx.createRadialGradient(px, py, 0, px, py, currentVision);
             gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
-            gradient.addColorStop(0.7, 'rgba(0, 0, 0, 1)');
+            gradient.addColorStop(0.3, 'rgba(0, 0, 0, 0.95)');
+            gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.3)');
             gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.restore();
+
+            // Add a dark overlay outside vision
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
         }
+
+        const creepyMessages = [
+            "STAY IN THE LIGHT",
+            "IT'S WATCHING",
+            "DON'T LOOK BACK",
+            "THE WALLS ARE MOVING",
+            "EXHAUSTED?",
+            "ALONE IN THE DARK",
+            "KEEP RUNNING",
+            "CAN YOU HEAR IT?"
+        ];
+
+        function showCreepyMessage() {
+            if (isGameWon) return;
+            const msg = creepyMessages[Math.floor(Math.random() * creepyMessages.length)];
+            messageEl.textContent = msg;
+            messageEl.style.opacity = 1;
+            setTimeout(() => {
+                if (!isGameWon) messageEl.style.opacity = 0;
+            }, 2000);
+        }
+
+        setInterval(showCreepyMessage, 8000);
 
         function movePlayer(dx, dy) {
             if (isGameWon) return;
@@ -244,7 +318,6 @@
             if (nx >= 0 && nx < GRID_WIDTH && ny >= 0 && ny < GRID_HEIGHT && !grid[ny][nx].isWall) {
                 player.x = nx;
                 player.y = ny;
-                draw();
                 if (player.x === goal.x && player.y === goal.y) {
                     winLevel();
                 }
@@ -253,13 +326,13 @@
 
         function winLevel() {
             isGameWon = true;
-            messageEl.textContent = 'LEVEL CLEAR!';
-            messageEl.style.color = 'var(--player-color)';
-            draw();
+            messageEl.textContent = 'YOU ESCAPED... FOR NOW';
+            messageEl.style.opacity = 1;
+            messageEl.style.color = '#ff0000';
             setTimeout(() => {
                 currentLevel++;
                 startNewGame();
-            }, 1500);
+            }, 2000);
         }
 
         function startNewGame(reset = false) {
@@ -267,10 +340,8 @@
             
             levelEl.textContent = currentLevel;
             
-            // Adjust difficulty based on level
             GRID_WIDTH = 15 + (currentLevel - 1) * 4;
             GRID_HEIGHT = 15 + (currentLevel - 1) * 4;
-            // Cap size at 55 for performance
             if (GRID_WIDTH > 55) GRID_WIDTH = 55;
             if (GRID_HEIGHT > 55) GRID_HEIGHT = 55;
             
@@ -288,8 +359,7 @@
             goal = { x: GRID_WIDTH - 2, y: GRID_HEIGHT - 2 };
             isGameWon = false;
             messageEl.textContent = '';
-            
-            draw();
+            messageEl.style.opacity = 0;
         }
 
         window.addEventListener('keydown', (e) => {
@@ -304,6 +374,7 @@
         newGameBtn.addEventListener('click', () => startNewGame(true));
 
         startNewGame();
+        animate();
     </script>
 </body>
 </html>
