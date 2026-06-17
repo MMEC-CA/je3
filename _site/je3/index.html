@@ -197,13 +197,6 @@
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Random static glitch
-            if (Math.random() > 0.98) {
-                ctx.fillStyle = 'rgba(255, 0, 0, 0.05)';
-                ctx.fillRect(Math.random() * canvas.width, 0, 2, canvas.height);
-            }
-
             drawMazeContent();
             if (!isGameWon) {
                 applyFogOfWar();
@@ -220,24 +213,18 @@
                 }
             }
 
-            // Pulsing goal
-            const goalColor = `rgba(122, 0, 0, ${0.5 + pulse * 0.5})`;
-            ctx.fillStyle = goalColor;
-            ctx.shadowBlur = 10 + pulse * 10;
-            ctx.shadowColor = '#ff0000';
+            ctx.fillStyle = 'var(--goal-color)';
             ctx.beginPath();
             ctx.arc(
                 goal.x * CELL_SIZE + CELL_SIZE / 2,
                 goal.y * CELL_SIZE + CELL_SIZE / 2,
-                (CELL_SIZE / 3) * (0.8 + pulse * 0.4), 0, Math.PI * 2
+                CELL_SIZE / 3, 0, Math.PI * 2
             );
             ctx.fill();
-            ctx.shadowBlur = 0;
 
-            // Player with blood-like trail/glow
             ctx.fillStyle = 'var(--player-color)';
-            ctx.shadowBlur = 15 + flicker;
-            ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'var(--player-color)';
             ctx.fillRect(
                 player.x * CELL_SIZE + 4,
                 player.y * CELL_SIZE + 4,
@@ -287,13 +274,13 @@
 
         function winLevel() {
             isGameWon = true;
-            messageEl.textContent = 'YOU ESCAPED... FOR NOW';
-            messageEl.style.opacity = 1;
-            messageEl.style.color = '#ff0000';
+            messageEl.textContent = 'LEVEL CLEAR!';
+            messageEl.style.color = 'var(--player-color)';
+            draw();
             setTimeout(() => {
                 currentLevel++;
                 startNewGame();
-            }, 2000);
+            }, 1500);
         }
 
         function startNewGame(reset = false) {
