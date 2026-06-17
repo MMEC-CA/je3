@@ -6,8 +6,8 @@
     <title>Maze Game</title>
     <style>
         :root {
-            --bg-color: #2d2d2d;
-            --text-color: #0f4d29;
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
             --wall-color: #4a4a4a;
             --player-color: #f7faf9;
             --goal-color: #ebdb64;
@@ -187,7 +187,6 @@
 
         function animate() {
             const now = Date.now();
-            // Trigger a 2-second flickering event every 70 seconds
             const cycle = now % 70000; 
             if (cycle < 2000) {
                 flicker = Math.random() * 15;
@@ -272,7 +271,6 @@
             isGameWon = true;
             messageEl.textContent = 'LEVEL CLEAR!';
             messageEl.style.color = 'var(--player-color)';
-            draw();
             setTimeout(() => {
                 currentLevel++;
                 startNewGame();
@@ -300,10 +298,28 @@
             braidMaze(0.05 + Math.min(0.1, currentLevel * 0.01));
             
             player = { x: 1, y: 1 };
-            goal = { x: GRID_WIDTH - 2, y: GRID_HEIGHT - 2 };
+            
+            // Randomize goal position
+            let possibleGoals = [];
+            for (let y = 1; y < GRID_HEIGHT - 1; y++) {
+                for (let x = 1; x < GRID_WIDTH - 1; x++) {
+                    if (!grid[y][x].isWall && (x !== player.x || y !== player.y)) {
+                        const dist = Math.sqrt(Math.pow(x - player.x, 2) + Math.pow(y - player.y, 2));
+                        if (dist > (GRID_WIDTH + GRID_HEIGHT) * 0.3) {
+                            possibleGoals.push({x, y});
+                        }
+                    }
+                }
+            }
+            
+            if (possibleGoals.length > 0) {
+                goal = possibleGoals[Math.floor(Math.random() * possibleGoals.length)];
+            } else {
+                goal = { x: GRID_WIDTH - 2, y: GRID_HEIGHT - 2 };
+            }
+
             isGameWon = false;
             messageEl.textContent = '';
-            messageEl.style.opacity = 0;
         }
 
         window.addEventListener('keydown', (e) => {
