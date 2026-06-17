@@ -10,7 +10,7 @@
             --text-color: #e0e0e0;
             --wall-color: #4a4a4a;
             --player-color: #f7faf9;
-            --goal-color: #ebdb64;
+            --door-color: #8b4513;
             --path-color: #5e5757;
             --vine-color: #2d5a27;
         }
@@ -214,16 +214,50 @@
                     if (grid[y][x].isWall) {
                         ctx.fillStyle = 'var(--wall-color)';
                         ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                        
+                        if (grid[y][x].hasVines) {
+                            ctx.strokeStyle = 'var(--vine-color)';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(x * CELL_SIZE + CELL_SIZE/2, y * CELL_SIZE);
+                            ctx.quadraticCurveTo(
+                                x * CELL_SIZE + (Math.random() > 0.5 ? 0 : CELL_SIZE), 
+                                y * CELL_SIZE + CELL_SIZE/2, 
+                                x * CELL_SIZE + CELL_SIZE/2, 
+                                y * CELL_SIZE + CELL_SIZE
+                            );
+                            ctx.stroke();
+                        }
                     }
                 }
             }
 
-            ctx.fillStyle = 'var(--goal-color)';
+            // Draw Door
+            ctx.fillStyle = 'var(--door-color)';
+            ctx.fillRect(
+                goal.x * CELL_SIZE + 4,
+                goal.y * CELL_SIZE + 2,
+                CELL_SIZE - 8,
+                CELL_SIZE - 4
+            );
+            
+            // Door highlight
+            ctx.strokeStyle = '#ebdb64';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+                goal.x * CELL_SIZE + 4,
+                goal.y * CELL_SIZE + 2,
+                CELL_SIZE - 8,
+                CELL_SIZE - 4
+            );
+
+            // Doorknob
+            ctx.fillStyle = '#ebdb64';
             ctx.beginPath();
             ctx.arc(
-                goal.x * CELL_SIZE + CELL_SIZE / 2,
+                goal.x * CELL_SIZE + CELL_SIZE - 8,
                 goal.y * CELL_SIZE + CELL_SIZE / 2,
-                CELL_SIZE / 3, 0, Math.PI * 2
+                1.5, 0, Math.PI * 2
             );
             ctx.fill();
 
@@ -298,6 +332,15 @@
             initGrid();
             generateMaze(1, 1);
             braidMaze(0.05 + Math.min(0.1, currentLevel * 0.01));
+            
+            // Add vines to some walls
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    if (grid[y][x].isWall && Math.random() < 0.12) {
+                        grid[y][x].hasVines = true;
+                    }
+                }
+            }
             
             player = { x: 1, y: 1 };
             
