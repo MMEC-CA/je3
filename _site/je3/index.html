@@ -6,7 +6,7 @@
     <title>Maze Game</title>
     <style>
         :root {
-            --bg-color: #1a1a1a;
+            --bg-color: #2d2d2d;
             --text-color: #e0e0e0;
             --wall-color: #4a4a4a;
             --player-color: #f7faf9;
@@ -184,13 +184,17 @@
         }
 
         let flicker = 0;
-        let pulse = 0;
-        let breathe = 0;
 
         function animate() {
-            flicker = Math.random() * 15 * (Math.random() > 0.95 ? 2 : 0.2);
-            pulse = (Math.sin(Date.now() / 300) + 1) / 2;
-            breathe = Math.sin(Date.now() / 2000) * 5;
+            const now = Date.now();
+            // Trigger a 2-second flickering event every 70 seconds
+            const cycle = now % 70000; 
+            if (cycle < 2000) {
+                flicker = Math.random() * 15;
+            } else {
+                flicker = 0;
+            }
+            
             draw();
             requestAnimationFrame(animate);
         }
@@ -238,23 +242,15 @@
             const px = player.x * CELL_SIZE + CELL_SIZE / 2;
             const py = player.y * CELL_SIZE + CELL_SIZE / 2;
             
-            const currentVision = VISION_RADIUS - flicker + breathe;
+            const currentVision = VISION_RADIUS - flicker;
             
             ctx.save();
             ctx.globalCompositeOperation = 'destination-in';
             const gradient = ctx.createRadialGradient(px, py, 0, px, py, currentVision);
             gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
-            gradient.addColorStop(0.3, 'rgba(0, 0, 0, 0.95)');
-            gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.3)');
+            gradient.addColorStop(0.7, 'rgba(0, 0, 0, 1)');
             gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.restore();
-
-            // Add a dark overlay outside vision
-            ctx.save();
-            ctx.globalCompositeOperation = 'destination-over';
-            ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.restore();
         }
